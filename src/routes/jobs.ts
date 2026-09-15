@@ -1,17 +1,25 @@
 import { Router } from "express"
 import { z } from "zod"
-import { getJobById, searchJobs } from "../services/meu-padrinho.js"
+import { getJobById, listFontes, parseFontesQuery, searchAllJobs } from "../services/aggregator.js"
 
 const listQuery = z.object({
   nivel: z.enum(["estagio", "junior", "pleno", "senior"]),
   page: z.coerce.number().int().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
+  fontes: z.string().min(1).optional(),
   tipo_contrato: z.string().min(1).optional(),
   forma_trabalho: z.string().min(1).optional(),
+  estado: z.string().min(1).optional(),
+  cidade: z.string().min(1).optional(),
   local: z.string().min(1).optional(),
+  q: z.string().min(1).optional(),
 })
 
 export const jobsRouter = Router()
+
+jobsRouter.get("/fontes", (_req, res) => {
+  res.json(listFontes())
+})
 
 jobsRouter.get("/", async (req, res) => {
   const parsed = listQuery.safeParse(req.query)
@@ -24,33 +32,25 @@ jobsRouter.get("/", async (req, res) => {
 
   const q = parsed.data
   try {
-    const vagas = await searchJobs({
+    const result = await searchAllJobs({
       nivel: q.nivel,
       page: q.page,
       limit: q.limit,
+      fontes: parseFontesQuery(q.fontes),
       tipo_contrato: q.tipo_contrato,
       forma_trabalho: q.forma_trabalho,
+      estado: q.estado,
+      cidade: q.cidade,
       local: q.local,
+      q: q.q,
     })
 
-    return res.json({
-      fonte: "meu-padrinho",
-      total: vagas.length,
-      page: q.page ?? 0,
-      limit: q.limit ?? 10,
-      filtros: {
-        nivel: q.nivel,
-        tipo_contrato: q.tipo_contrato,
-        forma_trabalho: q.forma_trabalho,
-        local: q.local,
-      },
-      vagas,
-    })
+    return res.json(result)
   } catch (e) {
     console.error(e)
     return res.status(502).json({
-      erro: "Falha ao consultar Meu Padrinho",
-      dica: "Tente de novo em alguns minutos.",
+      erro: "Falha ao agregar vagas",
+      dica: "Tente de novo em alguns minutos ou reduza as fontes com ?fontes=meu-padrinho",
     })
   }
 })
@@ -60,5 +60,5 @@ jobsRouter.get("/:id", async (req, res) => {
   if (!job) {
     return res.status(404).json({ erro: "Vaga não encontrada" })
   }
-  return res.json({ fonte: "meu-padrinho", vaga: job })
+  return res.json({ vaga: job })
 })

@@ -1,7 +1,8 @@
 import { config } from "../lib/config.js"
 import { createCache } from "../lib/cache.js"
-import { matchesFilter, normalizeJob, normalizeText } from "../lib/normalize.js"
-import type { JobListing } from "../types.js"
+import { normalizeMeuPadrinhoJob, normalizeText, nivelSlugMatches } from "../lib/normalize.js"
+import { mapPool } from "../lib/pool.js"
+import type { JobFilters, JobListing } from "../types.js"
 
 type ListResponse = {
   vagas?: Array<{
@@ -46,57 +47,29 @@ async function fetchDetail(nanoId: string) {
   return { detail, tecnologias }
 }
 
-async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = []
-  let i = 0
-  async function worker() {
-    while (i < items.length) {
-      const idx = i++
-      out[idx] = await fn(items[idx]!)
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()))
-  return out
-}
-
-export type SearchParams = {
-  nivel: string
-  page?: number
-  limit?: number
-  tipo_contrato?: string
-  forma_trabalho?: string
-  local?: string
-}
-
-export async function searchJobs(params: SearchParams): Promise<JobListing[]> {
-  const limit = Math.min(Math.max(params.limit ?? 10, 1), 50)
+export async function searchMeuPadrinho(params: JobFilters, fetchLimit: number): Promise<JobListing[]> {
   const page = Math.max(params.page ?? 0, 0)
   const targetNivel = normalizeText(params.nivel)
 
   const list = await fetchList(params.nivel, page)
   const items = list.vagas ?? []
 
-  const candidates = items.filter((v) => !v.nivel || normalizeText(v.nivel) === targetNivel)
+  const candidates = items
+    .filter((v) => !v.nivel || normalizeText(v.nivel) === targetNivel || nivelSlugMatches(v.nivel, params.nivel))
+    .slice(0, fetchLimit)
 
   const detailed = await mapPool(candidates, config.fetchConcurrency, async (item) => {
     const { detail, tecnologias } = await fetchDetail(item.nano_id)
-    return normalizeJob(item, detail, tecnologias)
+    return normalizeMeuPadrinhoJob(item, detail, tecnologias)
   })
 
   return detailed
-    .filter((job) => {
-      if (!matchesFilter(job.tipo_contrato, params.tipo_contrato)) return false
-      if (!matchesFilter(job.forma_trabalho, params.forma_trabalho)) return false
-      if (!matchesFilter(job.local, params.local)) return false
-      return Boolean(job.link)
-    })
-    .slice(0, limit)
 }
 
-export async function getJobById(nanoId: string): Promise<JobListing | null> {
+export async function getMeuPadrinhoJob(nanoId: string): Promise<JobListing | null> {
   try {
     const { detail, tecnologias } = await fetchDetail(nanoId)
-    return normalizeJob({ nano_id: nanoId }, detail, tecnologias)
+    return normalizeMeuPadrinhoJob({ nano_id: nanoId }, detail, tecnologias)
   } catch {
     return null
   }

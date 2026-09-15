@@ -1,7 +1,7 @@
 {
   "name": "fonte-vagas-api",
-  "version": "0.1.0",
-  "description": "API agregadora de vagas — Meu Padrinho e outras fontes",
+  "version": "0.2.0",
+  "description": "API agregadora de vagas — Meu Padrinho, Gupy e GitHub",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
