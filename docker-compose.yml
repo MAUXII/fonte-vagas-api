@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "4010:4010"
+    environment:
+      PORT: 4010
+      CACHE_TTL: 300
+      FETCH_CONCURRENCY: 4
+    restart: unless-stopped
