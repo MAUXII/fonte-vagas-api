@@ -1,7 +1,7 @@
 {
   "name": "fonte-vagas-api",
   "version": "0.2.0",
-  "description": "API agregadora de vagas — Meu Padrinho, Gupy e GitHub",
+  "description": "API agregadora de vagas com listagem paginada em JSON para JavaScript. Fontes públicas, filtros por nível, área e local.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

@@ -111,6 +111,16 @@ export function resolveStateToken(filter: string): { uf: string | null; name: st
   return { uf: null, name: n }
 }
 
+export function isRemoteJob(local: string | null, formaTrabalho: string | null = null): boolean {
+  const blob = normalizeText([local, formaTrabalho].filter(Boolean).join(" "))
+  return (
+    blob.includes("remoto") ||
+    blob.includes("remote") ||
+    blob.includes("home office") ||
+    blob.includes("qualquer lugar")
+  )
+}
+
 export function matchesState(
   estado: string | null,
   cidade: string | null,
@@ -123,8 +133,12 @@ export function matchesState(
   const blob = normalizeText([estado, cidade, local].filter(Boolean).join(" "))
 
   if (uf) {
-    if (estado && normalizeText(estado) === uf.toLowerCase()) return true
-    if (estado && normalizeText(UF_NAMES[uf] ?? "") === name) return true
+    if (estado) {
+      const jobEstado = normalizeText(estado)
+      if (jobEstado === uf.toLowerCase()) return true
+      if (NAME_TO_UF[jobEstado] === uf) return true
+      return false
+    }
     if (local && normalizeText(local).includes(uf.toLowerCase())) return true
     if (local && normalizeText(local).includes(name)) return true
     return false

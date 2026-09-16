@@ -5,6 +5,7 @@ import type { JobFilters, JobListing, JobSource, JobsListResponse, SourceFetchRe
 import { getGupyJob, searchGupy } from "./gupy.js"
 import { getGithubJob, searchGithubIssues } from "./github-issues.js"
 import { getMeuPadrinhoJob, searchMeuPadrinho } from "./meu-padrinho.js"
+import { getVagasDevLinkedinJob, searchVagasDevLinkedin } from "./vagas-dev-linkedin.js"
 
 const ADAPTERS: Record<
   JobSource,
@@ -13,11 +14,12 @@ const ADAPTERS: Record<
   "meu-padrinho": { search: searchMeuPadrinho, get: getMeuPadrinhoJob },
   gupy: { search: searchGupy, get: getGupyJob },
   github: { search: searchGithubIssues, get: getGithubJob },
+  linkedin: { search: searchVagasDevLinkedin, get: getVagasDevLinkedinJob },
 }
 
 export function parseFontesQuery(raw?: string): JobSource[] {
   if (!raw?.trim()) return config.defaultFontes
-  const valid = new Set<JobSource>(["meu-padrinho", "gupy", "github"])
+  const valid = new Set<JobSource>(["meu-padrinho", "gupy", "github", "linkedin"])
   const parsed = raw
     .split(",")
     .map((s) => s.trim() as JobSource)
@@ -41,8 +43,14 @@ export async function searchAllJobs(params: JobFilters): Promise<JobsListRespons
   const limit = Math.min(Math.max(params.limit ?? 10, 1), 50)
   const page = Math.max(params.page ?? 0, 0)
 
-  // Busca mais profunda para agregar, filtrar e paginar depois
-  const fetchLimit = Math.min(50, limit * (page + 2))
+  // Busca profunda: filtros de área/estado eliminam muita coisa depois
+  const hasStrictFilters = Boolean(
+    (params.area && params.area !== "qualquer") ||
+      params.estado ||
+      params.cidade ||
+      params.forma_trabalho,
+  )
+  const fetchLimit = hasStrictFilters ? 50 : Math.min(50, limit * (page + 2))
 
   const batches = await Promise.all(fontes.map((f) => fetchFromSource(f, params, fetchLimit)))
 
@@ -59,6 +67,11 @@ export async function searchAllJobs(params: JobFilters): Promise<JobsListRespons
   merged = dedupeJobs(merged)
   merged = applyJobFilters(merged, params)
   merged = sortJobsByDate(merged)
+
+  const por_fonte_filtrado: Record<string, number> = {}
+  for (const job of merged) {
+    por_fonte_filtrado[job.fonte] = (por_fonte_filtrado[job.fonte] ?? 0) + 1
+  }
 
   const total = merged.length
   const start = page * limit
@@ -77,9 +90,11 @@ export async function searchAllJobs(params: JobFilters): Promise<JobsListRespons
       cidade: params.cidade,
       local: params.local,
       q: params.q,
+      area: params.area,
     },
     fontes_consultadas: fontes,
     por_fonte,
+    por_fonte_filtrado,
     avisos,
     vagas,
   }
@@ -103,7 +118,7 @@ export function listFontes() {
       {
         id: "meu-padrinho",
         nome: "Meu Padrinho",
-        descricao: "Curadoria IA — LinkedIn e outras plataformas",
+        descricao: "Curadoria com nivel explicito (meupadrinho.com.br)",
         filtros: ["nivel", "estado", "cidade", "forma_trabalho"],
       },
       {
@@ -116,7 +131,13 @@ export function listFontes() {
         id: "github",
         nome: "GitHub Issues",
         descricao: `Repositórios comunitários: ${config.githubRepos.join(", ")}`,
-        filtros: ["nivel", "estado", "cidade", "forma_trabalho"],
+        filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
+      },
+      {
+        id: "linkedin",
+        nome: "LinkedIn",
+        descricao: "LinkedIn via scraper open source vagas-dev (API publica de terceiros)",
+        filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
       },
     ],
     default: config.defaultFontes,

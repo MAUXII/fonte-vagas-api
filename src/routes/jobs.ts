@@ -13,6 +13,7 @@ const listQuery = z.object({
   cidade: z.string().min(1).optional(),
   local: z.string().min(1).optional(),
   q: z.string().min(1).optional(),
+  area: z.enum(["tecnologia", "design", "dados", "administracao", "qualquer"]).optional(),
 })
 
 export const jobsRouter = Router()
@@ -43,6 +44,7 @@ jobsRouter.get("/", async (req, res) => {
       cidade: q.cidade,
       local: q.local,
       q: q.q,
+      area: q.area,
     })
 
     return res.json(result)

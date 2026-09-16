@@ -18,16 +18,20 @@ export const config = {
   githubToken: process.env.GITHUB_TOKEN ?? "",
   githubRepos: (process.env.GITHUB_REPOS?.split(",").map((s) => s.trim()).filter(Boolean) ??
     DEFAULT_GITHUB_REPOS) as string[],
-  defaultFontes: parseFontes(process.env.DEFAULT_FONTES ?? "meu-padrinho,gupy,github"),
+  vagasDevBase: process.env.VAGAS_DEV_API_URL ?? "https://vagas-api.henriquesebastiao.com",
+  vagasDevEnabled: process.env.VAGAS_DEV_ENABLED !== "false",
+  defaultFontes: parseFontes(
+    process.env.DEFAULT_FONTES ?? "meu-padrinho,gupy,github,linkedin",
+  ),
 }
 
 function parseFontes(raw: string): JobSource[] {
-  const valid = new Set<JobSource>(["meu-padrinho", "gupy", "github"])
+  const valid = new Set<JobSource>(["meu-padrinho", "gupy", "github", "linkedin"])
   const parsed = raw
     .split(",")
     .map((s) => s.trim() as JobSource)
     .filter((s) => valid.has(s))
-  return parsed.length > 0 ? parsed : ["meu-padrinho", "gupy", "github"]
+  return parsed.length > 0 ? parsed : ["meu-padrinho", "gupy", "github", "linkedin"]
 }
 
 export const NIVEL_SEARCH_TERMS: Record<string, string> = {

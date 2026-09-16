@@ -1,3 +1,4 @@
+import { gupySearchTermForArea } from "../lib/area-filter.js"
 import { config, NIVEL_SEARCH_TERMS } from "../lib/config.js"
 import { createCache } from "../lib/cache.js"
 import { UF_NAMES } from "../lib/location.js"
@@ -80,7 +81,7 @@ function normalizeGupyJob(job: GupyJob): JobListing {
     id: `gupy:${job.id}`,
     fonte: "gupy",
     titulo: job.name,
-    empresa: job.careerPageName ?? "—",
+    empresa: job.careerPageName ?? "N/A",
     nivel: mapNivel(job),
     tipo_contrato: mapContractType(job.type),
     forma_trabalho: forma,
@@ -118,9 +119,20 @@ async function fetchGupySearch(jobName: string, offset: number, limit: number): 
 }
 
 function passesNivel(job: GupyJob, nivel: NivelSlug): boolean {
+  const title = normalizeText(job.name)
+  const blob = normalizeText(`${job.name} ${job.description ?? ""}`)
+
+  if (nivel === "estagio") {
+    const isInternshipType =
+      job.type === "vacancy_type_internship" || job.type === "vacancy_type_apprentice"
+    const titleSaysInternship = /\bestagi|\bintern\b|\baprendiz\b/.test(title)
+    if (/\bsenior\b|\bsr\b|\bpleno\b|\bespecialista\b/.test(title)) return false
+    if (isInternshipType || titleSaysInternship) return true
+    return false
+  }
+
   const mapped = mapNivel(job)
   if (!mapped) {
-    const blob = normalizeText(`${job.name} ${job.description ?? ""}`)
     const terms: Record<NivelSlug, string[]> = {
       estagio: ["estagio", "estagi", "intern", "aprendiz"],
       junior: ["junior", "jr"],
@@ -132,19 +144,49 @@ function passesNivel(job: GupyJob, nivel: NivelSlug): boolean {
   return nivelSlugMatches(mapped, nivel)
 }
 
+function gupySearchTerms(params: JobFilters): string[] {
+  const terms = new Set<string>()
+  if (params.q?.trim()) terms.add(params.q.trim())
+
+  const areaTerm = gupySearchTermForArea(params.area)
+  const nivelTerm = NIVEL_SEARCH_TERMS[params.nivel] ?? params.nivel
+
+  if (params.nivel === "estagio" && areaTerm) {
+    terms.add(`estagio ${areaTerm}`)
+    terms.add(areaTerm)
+  } else if (areaTerm) {
+    terms.add(areaTerm)
+    terms.add(nivelTerm)
+  } else {
+    terms.add(nivelTerm)
+  }
+
+  return [...terms]
+}
+
 export async function searchGupy(params: JobFilters, fetchLimit: number): Promise<JobListing[]> {
-  const jobName = params.q?.trim() || NIVEL_SEARCH_TERMS[params.nivel] || params.nivel
-  const page = Math.max(params.page ?? 0, 0)
-  const perPage = Math.min(50, fetchLimit)
-  const offset = page * perPage
+  const terms = gupySearchTerms(params)
+  const seen = new Set<number>()
+  const out: JobListing[] = []
 
-  const response = await fetchGupySearch(jobName, offset, perPage)
-  const rows = response.data ?? []
+  for (const jobName of terms) {
+    for (let offset = 0; offset < 200 && out.length < fetchLimit; offset += 50) {
+      const response = await fetchGupySearch(jobName, offset, 50)
+      const rows = response.data ?? []
+      if (rows.length === 0) break
 
-  return rows
-    .filter((job) => passesNivel(job, params.nivel))
-    .map(normalizeGupyJob)
-    .slice(0, fetchLimit)
+      for (const job of rows) {
+        if (seen.has(job.id)) continue
+        if (!passesNivel(job, params.nivel)) continue
+        seen.add(job.id)
+        out.push(normalizeGupyJob(job))
+        if (out.length >= fetchLimit) break
+      }
+    }
+    if (out.length >= fetchLimit) break
+  }
+
+  return out
 }
 
 export async function getGupyJob(id: string): Promise<JobListing | null> {

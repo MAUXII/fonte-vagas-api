@@ -154,7 +154,7 @@ function normalizeGithubIssue(issue: GhIssue, repo: string): JobListing {
     id: `gh:${ghId}`,
     fonte: "github",
     titulo: parsed.titulo,
-    empresa: parsed.empresa ?? repo.split("/")[0] ?? "—",
+    empresa: parsed.empresa ?? repo.split("/")[0] ?? "N/A",
     nivel,
     tipo_contrato: labelsToContract(labelNames),
     forma_trabalho: forma,
@@ -180,7 +180,7 @@ function matchesGithubNivel(job: JobListing, nivel: JobFilters["nivel"]): boolea
 }
 
 export async function searchGithubIssues(params: JobFilters, fetchLimit: number): Promise<JobListing[]> {
-  const perRepo = Math.max(5, Math.ceil(fetchLimit / config.githubRepos.length))
+  const perRepo = Math.max(15, Math.ceil(fetchLimit / config.githubRepos.length))
 
   const batches = await Promise.allSettled(
     config.githubRepos.map(async (repo) => {
@@ -190,15 +190,24 @@ export async function searchGithubIssues(params: JobFilters, fetchLimit: number)
   )
 
   const merged: JobListing[] = []
+  const errors: string[] = []
 
   for (const batch of batches) {
-    if (batch.status !== "fulfilled") continue
+    if (batch.status === "rejected") {
+      const msg = batch.reason instanceof Error ? batch.reason.message : String(batch.reason)
+      errors.push(msg)
+      continue
+    }
     const { repo, issues } = batch.value
     for (const issue of issues) {
       const job = normalizeGithubIssue(issue, repo)
       if (!matchesGithubNivel(job, params.nivel)) continue
       merged.push(job)
     }
+  }
+
+  if (merged.length === 0 && errors.length > 0) {
+    throw new Error(errors.join("; "))
   }
 
   return merged.slice(0, fetchLimit)

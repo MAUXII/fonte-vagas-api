@@ -1,10 +1,12 @@
-export type JobSource = "meu-padrinho" | "gupy" | "github"
+export type JobSource = "meu-padrinho" | "gupy" | "github" | "linkedin"
 
 export type NivelSlug = "estagio" | "junior" | "pleno" | "senior"
 
-/** Vaga normalizada — contrato estável para consumidores (JobStreak, etc.). */
+export type AreaSlug = "tecnologia" | "design" | "dados" | "administracao" | "qualquer"
+
+/** Vaga normalizada, contrato estável para consumidores (JobStreak, etc.). */
 export type JobListing = {
-  /** Formato `{fonte}:{id}` — ex.: `mp:9LiUhDMA`, `gupy:12498658`, `gh:frontendbr-8562` */
+  /** Formato `{fonte}:{id}`, ex.: `mp:9LiUhDMA`, `gupy:12498658`, `gh:frontendbr-8562` */
   id: string
   fonte: JobSource
   titulo: string
@@ -36,6 +38,7 @@ export type JobFilters = {
   cidade?: string
   local?: string
   q?: string
+  area?: AreaSlug
 }
 
 export type SourceFetchResult = {
@@ -51,6 +54,7 @@ export type JobsListResponse = {
   filtros: Record<string, string | string[] | number | undefined>
   fontes_consultadas: JobSource[]
   por_fonte: Record<string, number>
+  por_fonte_filtrado?: Record<string, number>
   avisos: string[]
   vagas: JobListing[]
 }

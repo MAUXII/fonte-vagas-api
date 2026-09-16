@@ -34,7 +34,7 @@ export function normalizeMeuPadrinhoJob(
     id: `mp:${listItem.nano_id}`,
     fonte: "meu-padrinho",
     titulo: detail.titulo_vaga ?? listItem.titulo_vaga ?? "Sem título",
-    empresa: detail.nome_empresa ?? listItem.nome_empresa ?? "—",
+    empresa: detail.nome_empresa ?? listItem.nome_empresa ?? "N/A",
     nivel: detail.nivel ?? detail.nivel_vaga ?? listItem.nivel ?? null,
     tipo_contrato: detail.tipo_contrato || null,
     forma_trabalho: detail.forma_trabalho ?? null,
@@ -88,7 +88,7 @@ export function nivelSlugMatches(jobNivel: string | null, slug: string): boolean
 }
 
 export function parseJobId(raw: string): { fonte: JobSource; id: string } | null {
-  const m = raw.match(/^(mp|gupy|gh):(.+)$/)
+  const m = raw.match(/^(mp|gupy|gh|li):(.+)$/)
   if (!m) return null
   const prefix = m[1]!
   const id = m[2]!
@@ -96,6 +96,7 @@ export function parseJobId(raw: string): { fonte: JobSource; id: string } | null
     mp: "meu-padrinho",
     gupy: "gupy",
     gh: "github",
+    li: "linkedin",
   }
   return { fonte: fonteMap[prefix]!, id }
 }
