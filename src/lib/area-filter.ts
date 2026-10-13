@@ -116,14 +116,21 @@ function hasAny(blob: string, terms: string[]): boolean {
   return terms.some((t) => blob.includes(normalizeText(t)))
 }
 
+/** Título decide primeiro: descrição de vaga de RH também cita "software" e "mobile". */
+const TECH_TITLE =
+  /\bti\b|\btic\b|tecnologia|software|desenvolv(edor|edora|imento de (sistemas|software|aplicac))|programa(dor|dora|cao)|\bdev\b|developer|front-?end|back-?end|full ?-?stack|\bdados\b|\bdata\b|sistemas|computacao|infraestrutura|\bredes\b|suporte tecnico|cyber|seguranca da informacao|\bqa\b|\btestes?\b|mobile|android|\bios\b|\bweb\b|cloud|devops|\bia\b|machine learning/
+
+const NON_TECH_TITLE =
+  /\brh\b|recursos humanos|departamento pessoal|administrativ|natacao|educacao fisica|quimica|mecanica|consultoria|estrategia|gestao|\bmonitor\b|pedagog|juridic|direito|contab|financ|marketing|comunicacao|vendas|comercial|recrutamento|enfermagem|nutricao|engenharia civil|arquitetura|logistica|compras|atendimento|social media|jornalismo|psicologia|novos negocios/
+
 function matchesTecnologia(job: JobListing, blob: string, title: string): boolean {
   if (job.fonte === "github") return true
   if (job.tecnologias.length > 0) return true
 
-  if (hasAny(blob, TECH_NEGATIVE) && !hasAny(title, TECH_POSITIVE)) {
-    return false
-  }
+  if (TECH_TITLE.test(title)) return true
+  if (NON_TECH_TITLE.test(title)) return false
 
+  if (hasAny(blob, TECH_NEGATIVE)) return false
   return hasAny(blob, TECH_POSITIVE)
 }
 
