@@ -1,6 +1,6 @@
 # fonte-vagas-api
 
-API REST que agrega vagas de várias fontes públicas brasileiras ([Meu Padrinho](https://meupadrinho.com.br), [Gupy Portal](https://portal.gupy.io) e repositórios comunitários no GitHub) em um formato único.
+API REST que agrega vagas de várias fontes públicas brasileiras ([Meu Padrinho](https://meupadrinho.com.br), [Gupy Portal](https://portal.gupy.io), repositórios comunitários no GitHub e quadros públicos de empresas no Greenhouse, Lever e Ashby) em um formato único.
 
 Devolve até 50 vagas por request, com filtros por nível, estado, cidade, modalidade e palavra-chave. Não preenche formulário nem se candidata: cada vaga traz o `link` para aplicar no site original.
 
@@ -11,15 +11,21 @@ Devolve até 50 vagas por request, com filtros por nível, estado, cidade, modal
 | ID | Origem | Observação |
 |----|--------|------------|
 | `meu-padrinho` | meupadrinho.com.br/api | Curadoria por IA, nível explícito |
-| `gupy` | employability-portal.gupy.io | Maior volume no Brasil, cidade e estado estruturados |
+| `gupy` | portal.gupy.io/api/job-search | Maior volume no Brasil, cidade e estado estruturados |
 | `github` | frontendbr/vagas, backend-br/vagas… | Issues abertas da comunidade |
+| `greenhouse` | boards-api.greenhouse.io | Stone, C6 Bank, XP, Inter, QuintoAndar… (`ATS_BOARDS`) |
+| `lever` | api.lever.co | CI&T, Neon, Swile (`ATS_BOARDS`) |
+| `ashby` | api.ashbyhq.com | Nubank (`ATS_BOARDS`) |
+| `linkedin` | vagas-dev (terceiros) | Fora do padrão: o serviço costuma estar fora do ar |
+
+Greenhouse, Lever e Ashby só devolvem vagas de empresas listadas em `ATS_BOARDS`, e só as localizadas no Brasil ou remotas para o Brasil.
 
 ## Como funciona
 
 - Cada fonte tem um serviço próprio (`src/services`) que busca e normaliza as vagas para o mesmo formato (`src/lib/normalize.ts`).
 - O agregador consulta as fontes em paralelo, com limite de concorrência, e junta os resultados.
 - Respostas ficam em cache em memória por fonte (`CACHE_TTL`), para não estourar rate limit.
-- IDs compostos (`gupy:123`, `mp:abc`, `gh:repo-123`) identificam a origem de cada vaga.
+- IDs compostos (`gupy:123`, `mp:abc`, `gh:repo-123`, `grh:stone-123`) identificam a origem de cada vaga.
 
 ## Rodar local
 
@@ -27,6 +33,7 @@ Devolve até 50 vagas por request, com filtros por nível, estado, cidade, modal
 npm install
 cp .env.example .env
 npm run dev
+npm test
 ```
 
 API em [http://localhost:4010](http://localhost:4010). Documentação em texto em `/docs`.
@@ -57,7 +64,8 @@ curl "http://localhost:4010/v1/jobs/fontes"
 | `nivel` | sim | `estagio` · `junior` · `pleno` · `senior` |
 | `limit` | não | 1–50, padrão **10** |
 | `page` | não | padrão **0** |
-| `fontes` | não | csv: `meu-padrinho,gupy,github` |
+| `fontes` | não | csv: `meu-padrinho,gupy,github,greenhouse,lever,ashby,linkedin` |
+| `area` | não | `tecnologia` · `design` · `dados` · `administracao` · `qualquer` |
 | `estado` | não | UF ou nome: `SP`, `São Paulo`, `Paraná` |
 | `cidade` | não | match parcial: `Campinas`, `Porto Alegre` |
 | `local` | não | busca em qualquer campo de local (legado) |
@@ -105,8 +113,12 @@ Resposta:
 |-----|--------|-----|
 | `PORT` | 4010 | porta HTTP |
 | `CACHE_TTL` | 300 | cache em segundos |
-| `FETCH_CONCURRENCY` | 4 | detalhes buscados em paralelo por request |
-| `DEFAULT_FONTES` | todas | fontes padrão |
+| `FETCH_CONCURRENCY` | 2 | detalhes do Meu Padrinho buscados em paralelo |
+| `MEU_PADRINHO_DETAIL_TTL` | 21600 | cache do detalhe de vaga, em segundos |
+| `DEFAULT_FONTES` | todas menos `linkedin` | fontes padrão |
+| `ATS_BOARDS` | empresas BR | csv `provedor:slug`, ex. `greenhouse:stone,lever:ciandt,ashby:nubank` |
+| `ATS_CACHE_TTL` | 1800 | cache dos quadros ATS, em segundos |
+| `GITHUB_CACHE_TTL` | 1800 | cache das issues, em segundos |
 | `GITHUB_TOKEN` | — | sobe o rate limit do GitHub de 60/h para 5000/h |
 | `GITHUB_REPOS` | repos BR | csv `owner/repo` |
 
@@ -117,6 +129,16 @@ docker compose up --build
 ```
 
 Roda em qualquer host com Docker. Healthcheck em `GET /health`.
+
+## Deploy no Railway
+
+```bash
+railway init
+railway up
+railway domain
+```
+
+O Railway usa o `Dockerfile` do repo. `PORT` é injetada pela plataforma. Configure `GITHUB_TOKEN` no painel, nunca no repositório.
 
 ## Licença
 
