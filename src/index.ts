@@ -66,17 +66,22 @@ app.use((_req, res) => {
   res.status(404).json({ erro: "Rota não encontrada" })
 })
 
-const server = app.listen(config.port, () => {
-  console.log(`fonte-vagas-api → http://localhost:${config.port}`)
-  console.log(`docs → http://localhost:${config.port}/docs`)
-})
+// Na Vercel o app vira função serverless: ela importa o default export e não usa listen.
+if (!process.env.VERCEL) {
+  const server = app.listen(config.port, () => {
+    console.log(`fonte-vagas-api → http://localhost:${config.port}`)
+    console.log(`docs → http://localhost:${config.port}/docs`)
+  })
 
-server.on("error", (err: NodeJS.ErrnoException) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(
-      `\nPorta ${config.port} ja esta em uso. Encerre o processo anterior ou use outra porta.\n`,
-    )
-    process.exit(1)
-  }
-  throw err
-})
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(
+        `\nPorta ${config.port} ja esta em uso. Encerre o processo anterior ou use outra porta.\n`,
+      )
+      process.exit(1)
+    }
+    throw err
+  })
+}
+
+export default app
