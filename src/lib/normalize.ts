@@ -89,7 +89,7 @@ export function nivelSlugMatches(jobNivel: string | null, slug: string): boolean
 }
 
 export function parseJobId(raw: string): { fonte: JobSource; id: string } | null {
-  const m = raw.match(/^(mp|gupy|gh|li):(.+)$/)
+  const m = raw.match(/^(mp|gupy|gh|grh|lev|ash|li):(.+)$/)
   if (!m) return null
   const prefix = m[1]!
   const id = m[2]!
@@ -97,6 +97,9 @@ export function parseJobId(raw: string): { fonte: JobSource; id: string } | null
     mp: "meu-padrinho",
     gupy: "gupy",
     gh: "github",
+    grh: "greenhouse",
+    lev: "lever",
+    ash: "ashby",
     li: "linkedin",
   }
   return { fonte: fonteMap[prefix]!, id }

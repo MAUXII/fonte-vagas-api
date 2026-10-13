@@ -24,6 +24,7 @@ type GupyJob = {
   jobUrl?: string
   workplaceType?: string
   skills?: Array<{ name?: string }>
+  careerPageLogo?: string
 }
 
 type GupyResponse = {
@@ -95,6 +96,7 @@ function normalizeGupyJob(job: GupyJob): JobListing {
     descricao: job.description?.slice(0, 500) ?? null,
     publicado_em: job.publishedDate ?? null,
     slug: null,
+    logo: job.careerPageLogo || null,
   }
 }
 

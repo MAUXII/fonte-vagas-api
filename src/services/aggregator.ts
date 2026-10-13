@@ -1,7 +1,8 @@
-import { config } from "../lib/config.js"
+import { config, parseFontes } from "../lib/config.js"
 import { applyJobFilters, dedupeJobs, sortJobsByDate } from "../lib/filters.js"
 import { parseJobId } from "../lib/normalize.js"
 import type { JobFilters, JobListing, JobSource, JobsListResponse, SourceFetchResult } from "../types.js"
+import { atsGet, atsSearch } from "./ats.js"
 import { getGupyJob, searchGupy } from "./gupy.js"
 import { getGithubJob, searchGithubIssues } from "./github-issues.js"
 import { getMeuPadrinhoJob, searchMeuPadrinho } from "./meu-padrinho.js"
@@ -14,17 +15,14 @@ const ADAPTERS: Record<
   "meu-padrinho": { search: searchMeuPadrinho, get: getMeuPadrinhoJob },
   gupy: { search: searchGupy, get: getGupyJob },
   github: { search: searchGithubIssues, get: getGithubJob },
+  greenhouse: { search: atsSearch("greenhouse"), get: atsGet("greenhouse") },
+  lever: { search: atsSearch("lever"), get: atsGet("lever") },
+  ashby: { search: atsSearch("ashby"), get: atsGet("ashby") },
   linkedin: { search: searchVagasDevLinkedin, get: getVagasDevLinkedinJob },
 }
 
 export function parseFontesQuery(raw?: string): JobSource[] {
-  if (!raw?.trim()) return config.defaultFontes
-  const valid = new Set<JobSource>(["meu-padrinho", "gupy", "github", "linkedin"])
-  const parsed = raw
-    .split(",")
-    .map((s) => s.trim() as JobSource)
-    .filter((s) => valid.has(s))
-  return parsed.length > 0 ? parsed : config.defaultFontes
+  return parseFontes(raw) ?? config.defaultFontes
 }
 
 async function fetchFromSource(fonte: JobSource, params: JobFilters, fetchLimit: number): Promise<SourceFetchResult> {
@@ -131,6 +129,24 @@ export function listFontes() {
         id: "github",
         nome: "GitHub Issues",
         descricao: `Repositórios comunitários: ${config.githubRepos.join(", ")}`,
+        filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
+      },
+      {
+        id: "greenhouse",
+        nome: "Greenhouse",
+        descricao: "Quadros publicos de empresas com vagas no Brasil (ATS_BOARDS)",
+        filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
+      },
+      {
+        id: "lever",
+        nome: "Lever",
+        descricao: "Quadros publicos de empresas com vagas no Brasil (ATS_BOARDS)",
+        filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
+      },
+      {
+        id: "ashby",
+        nome: "Ashby",
+        descricao: "Quadros publicos de empresas com vagas no Brasil (ATS_BOARDS)",
         filtros: ["nivel", "estado", "cidade", "forma_trabalho", "area"],
       },
       {

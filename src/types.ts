@@ -1,4 +1,11 @@
-export type JobSource = "meu-padrinho" | "gupy" | "github" | "linkedin"
+export type JobSource =
+  | "meu-padrinho"
+  | "gupy"
+  | "github"
+  | "greenhouse"
+  | "lever"
+  | "ashby"
+  | "linkedin"
 
 export type NivelSlug = "estagio" | "junior" | "pleno" | "senior"
 
@@ -25,6 +32,8 @@ export type JobListing = {
   descricao: string | null
   publicado_em: string | null
   slug: string | null
+  /** URL do logo da empresa, quando a fonte fornece. */
+  logo?: string | null
 }
 
 export type JobFilters = {
