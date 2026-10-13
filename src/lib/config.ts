@@ -13,7 +13,7 @@ export const config = {
   cacheTtlMs: Number(process.env.CACHE_TTL ?? 300) * 1000,
   fetchConcurrency: Number(process.env.FETCH_CONCURRENCY ?? 4),
   meuPadrinhoBase: "https://meupadrinho.com.br/api",
-  gupyPortalBase: "https://employability-portal.gupy.io/api/v1",
+  gupyPortalBase: "https://portal.gupy.io/api/job-search",
   githubApiBase: "https://api.github.com",
   githubToken: process.env.GITHUB_TOKEN ?? "",
   githubRepos: (process.env.GITHUB_REPOS?.split(",").map((s) => s.trim()).filter(Boolean) ??

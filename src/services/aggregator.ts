@@ -124,7 +124,7 @@ export function listFontes() {
       {
         id: "gupy",
         nome: "Gupy Portal",
-        descricao: "Portal público employability-portal.gupy.io",
+        descricao: "Portal público portal.gupy.io",
         filtros: ["nivel", "estado", "cidade", "forma_trabalho", "q"],
       },
       {

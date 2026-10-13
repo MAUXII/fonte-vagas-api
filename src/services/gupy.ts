@@ -1,4 +1,4 @@
-import { gupySearchTermForArea } from "../lib/area-filter.js"
+import { gupySearchTermForArea, matchesArea } from "../lib/area-filter.js"
 import { config, NIVEL_SEARCH_TERMS } from "../lib/config.js"
 import { createCache } from "../lib/cache.js"
 import { UF_NAMES } from "../lib/location.js"
@@ -108,7 +108,9 @@ async function fetchGupySearch(jobName: string, offset: number, limit: number): 
   url.searchParams.set("offset", String(offset))
   url.searchParams.set("limit", String(Math.min(limit, 50)))
 
-  const res = await fetch(url, { headers: { Accept: "application/json" } })
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "fonte-vagas-api" },
+  })
   if (!res.ok) {
     throw new Error(`Gupy ${res.status}`)
   }
@@ -144,6 +146,13 @@ function passesNivel(job: GupyJob, nivel: NivelSlug): boolean {
   return nivelSlugMatches(mapped, nivel)
 }
 
+/** A busca da Gupy casa a frase quase literal; estes termos cobrem títulos comuns de estágio. */
+const GUPY_EXTRA_INTERNSHIP_TERMS: Partial<Record<string, string[]>> = {
+  tecnologia: ["estagio ti", "estagio software", "estagio tecnologia", "estagio programacao"],
+  dados: ["estagio analise de dados", "estagio bi"],
+  design: ["estagio ux", "estagio ui"],
+}
+
 function gupySearchTerms(params: JobFilters): string[] {
   const terms = new Set<string>()
   if (params.q?.trim()) terms.add(params.q.trim())
@@ -153,7 +162,10 @@ function gupySearchTerms(params: JobFilters): string[] {
 
   if (params.nivel === "estagio" && areaTerm) {
     terms.add(`estagio ${areaTerm}`)
+    for (const extra of GUPY_EXTRA_INTERNSHIP_TERMS[params.area ?? ""] ?? []) terms.add(extra)
     terms.add(areaTerm)
+    // termo amplo por último; o filtro de área no loop descarta o que não interessa
+    terms.add(nivelTerm)
   } else if (areaTerm) {
     terms.add(areaTerm)
     terms.add(nivelTerm)
@@ -179,7 +191,9 @@ export async function searchGupy(params: JobFilters, fetchLimit: number): Promis
         if (seen.has(job.id)) continue
         if (!passesNivel(job, params.nivel)) continue
         seen.add(job.id)
-        out.push(normalizeGupyJob(job))
+        const normalized = normalizeGupyJob(job)
+        if (!matchesArea(normalized, params.area)) continue
+        out.push(normalized)
         if (out.length >= fetchLimit) break
       }
     }
