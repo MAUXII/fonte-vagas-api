@@ -35,12 +35,14 @@ function ghHeaders(): Record<string, string> {
   return h
 }
 
-async function fetchRepoIssues(repo: string, perPage: number): Promise<GhIssue[]> {
-  const key = `${repo}:${perPage}`
+const ISSUES_PER_REPO = 50
+
+async function fetchRepoIssues(repo: string): Promise<GhIssue[]> {
+  const key = repo
   const cached = issuesCache.get(key)
   if (cached) return cached
 
-  const url = `${config.githubApiBase}/repos/${repo}/issues?state=open&per_page=${perPage}&sort=created&direction=desc`
+  const url = `${config.githubApiBase}/repos/${repo}/issues?state=open&per_page=${ISSUES_PER_REPO}&sort=created&direction=desc`
   const res = await fetch(url, { headers: ghHeaders() })
   if (!res.ok) {
     throw new Error(`GitHub ${res.status} em ${repo}`)
@@ -48,7 +50,7 @@ async function fetchRepoIssues(repo: string, perPage: number): Promise<GhIssue[]
 
   const raw = (await res.json()) as Array<GhIssue & { pull_request?: unknown }>
   const issues = raw.filter((i) => !i.pull_request)
-  issuesCache.set(key, issues, config.cacheTtlMs)
+  issuesCache.set(key, issues, config.githubCacheTtlMs)
   return issues
 }
 
@@ -180,11 +182,10 @@ function matchesGithubNivel(job: JobListing, nivel: JobFilters["nivel"]): boolea
 }
 
 export async function searchGithubIssues(params: JobFilters, fetchLimit: number): Promise<JobListing[]> {
-  const perRepo = Math.max(15, Math.ceil(fetchLimit / config.githubRepos.length))
 
   const batches = await Promise.allSettled(
     config.githubRepos.map(async (repo) => {
-      const issues = await fetchRepoIssues(repo, Math.min(perRepo, 30))
+      const issues = await fetchRepoIssues(repo)
       return { repo, issues }
     }),
   )
