@@ -67,8 +67,9 @@ export function matchesFilter(value: string | null, filter?: string): boolean {
 
 export function inferNivelFromText(...parts: (string | null | undefined)[]): string | null {
   const blob = normalizeText(parts.filter(Boolean).join(" "))
-  if (/\bestagi(o|io|aria)\b/.test(blob) || blob.includes("intern")) return "Estágio"
-  if (/\btrainee\b/.test(blob) || blob.includes("aprendiz")) return "Trainee"
+  // \b evita casar "internacional", "internet" e "aprendizado"
+  if (/\bestagi(o|io|aria)\b/.test(blob) || /\bintern(s|ship)?\b/.test(blob)) return "Estágio"
+  if (/\btrainee\b|\baprendiz\b/.test(blob)) return "Trainee"
   if (/\bjunior\b|\bjr\b|\bjunior\b/.test(blob)) return "Júnior"
   if (/\bpleno\b|\bpl\b/.test(blob)) return "Pleno"
   if (/\bsenior\b|\bsr\b|\bespecialista\b/.test(blob)) return "Sênior"
