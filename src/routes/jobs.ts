@@ -1,8 +1,10 @@
 import { Router } from "express"
 import { z } from "zod"
+import type { JobListing } from "../types.js"
 import { getJobById, listFontes, parseFontesQuery, searchAllJobs } from "../services/aggregator.js"
 
 const listQuery = z.object({
+  descricao: z.literal("completa").optional(),
   nivel: z.enum(["estagio", "junior", "pleno", "senior"]),
   page: z.coerce.number().int().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
@@ -15,6 +17,11 @@ const listQuery = z.object({
   q: z.string().min(1).optional(),
   area: z.enum(["tecnologia", "design", "dados", "administracao", "qualquer"]).optional(),
 })
+
+export function serializeJob(job: JobListing, full: boolean): JobListing {
+  const { descricaoCompleta, ...summary } = job
+  return full ? { ...summary, descricao: descricaoCompleta ?? summary.descricao } : summary
+}
 
 export const jobsRouter = Router()
 
@@ -47,7 +54,7 @@ jobsRouter.get("/", async (req, res) => {
       area: q.area,
     })
 
-    return res.json(result)
+    return res.json({ ...result, vagas: result.vagas.map((job) => serializeJob(job, q.descricao === "completa")) })
   } catch (e) {
     console.error(e)
     return res.status(502).json({
@@ -62,5 +69,5 @@ jobsRouter.get("/:id", async (req, res) => {
   if (!job) {
     return res.status(404).json({ erro: "Vaga não encontrada" })
   }
-  return res.json({ vaga: job })
+  return res.json({ vaga: serializeJob(job, req.query.descricao === "completa") })
 })

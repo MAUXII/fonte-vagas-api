@@ -30,6 +30,7 @@ export type JobListing = {
   plataforma: string | null
   tecnologias: string[]
   descricao: string | null
+  descricaoCompleta?: string | null
   publicado_em: string | null
   slug: string | null
   /** URL do logo da empresa, quando a fonte fornece. */

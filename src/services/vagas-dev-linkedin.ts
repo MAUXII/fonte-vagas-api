@@ -134,6 +134,7 @@ function normalizeLinkedinJob(job: VagasDevJob): JobListing {
     plataforma: "LinkedIn",
     tecnologias: job.keyword ? [job.keyword] : [],
     descricao: job.description?.slice(0, 500) ?? null,
+    descricaoCompleta: job.description ?? null,
     publicado_em: job.found_at,
     slug: String(job.id),
   }

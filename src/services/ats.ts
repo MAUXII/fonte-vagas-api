@@ -134,6 +134,7 @@ function buildListing(
     plataforma: PLATFORM_LABEL[board.provider],
     tecnologias: [],
     descricao: fields.descricao?.slice(0, 500) ?? null,
+    descricaoCompleta: fields.descricao ?? null,
     publicado_em: fields.publicadoEm ?? null,
     slug: `${board.provider}/${board.slug}`,
     logo: null,

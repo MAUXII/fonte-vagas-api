@@ -170,6 +170,7 @@ function normalizeGithubIssue(issue: GhIssue, repo: string): JobListing {
       /^(react|node|python|java|go|typescript|javascript|\.net|php|ruby|rust)$/i.test(l),
     ),
     descricao: issue.body?.slice(0, 400) ?? null,
+    descricaoCompleta: issue.body ?? null,
     publicado_em: issue.created_at,
     slug: `${repo}#${issue.number}`,
   }

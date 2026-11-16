@@ -94,6 +94,7 @@ function normalizeGupyJob(job: GupyJob): JobListing {
     plataforma: "Gupy",
     tecnologias: job.skills?.map((s) => s.name).filter((n): n is string => Boolean(n)) ?? [],
     descricao: job.description?.slice(0, 500) ?? null,
+    descricaoCompleta: job.description ?? null,
     publicado_em: job.publishedDate ?? null,
     slug: null,
     logo: job.careerPageLogo || null,
